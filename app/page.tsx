@@ -1,103 +1,295 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
+
+const BIN_ID = '68b8785143b1c97be935ba70';
+const API_KEY = '$2a$10$RlqGKgZbf07v6KyuD9/qm.K/eYGgFu.FCqzpc1ahnjyKjhwbq05F6';
+
+type Todo = {
+  id: number;
+  title: string;
+  description?: string;
+  start: Date;
+  end: Date;
+  color: string;
+};
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [start, setStart] = useState("0824-10-24");
+  const [end, setEnd] = useState("0824-10-24");
+  const [customToday, setCustomToday] = useState<Date | null>(null);
+  const [loading, setLoading] = useState(true);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  // ✅ BUSCAR TODOS DO JSONBIN
+  const fetchTodos = async () => {
+    try {
+      const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+        headers: {
+          'X-Master-Key': API_KEY,
+        }
+      });
+      const data = await response.json();
+   const todosWithDates = (data.record || []).map((todo: any) => ({
+      ...todo,
+      start: new Date(todo.start),
+      end: new Date(todo.end)
+    }));
+    
+    setTodos(todosWithDates);
+  } catch (error) {
+    console.error('Erro ao buscar TODOs:', error);
+  } finally {
+    setLoading(false);
+  }
+  };
+  const changeDate = (target:any) => {
+setCustomToday(fixDate(target))
+setStart(target)
+setEnd(target)
+  }
+  // ✅ ADICIONAR TODO NO JSONBIN
+  const handleAddTodo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !start || !end) return;
+
+    const startDate = fixDate(start);
+    const endDate = fixDate(end);
+    const newTodo: Todo = {
+      id: Date.now(),
+      title,
+      description,
+      start: new Date(startDate),
+      end: new Date(endDate),
+      color: getRandomColor(),
+    };
+
+    try {
+      const updatedTodos = [...todos, newTodo];
+      
+      await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': API_KEY,
+        },
+        body: JSON.stringify(updatedTodos),
+      });
+
+      setTodos(updatedTodos);
+      setTitle("");
+      setDescription("");
+      setStart("0824-10-24");
+      setEnd("0824-10-24");
+    } catch (error) {
+      console.error('Erro ao adicionar TODO:', error);
+    }
+  };
+
+  // ✅ DELETAR TODO DO JSONBIN
+  const deleteTask = async (id: number) => {
+    try {
+      const updatedTodos = todos.filter(todo => todo.id !== id);
+      
+      await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': API_KEY,
+        },
+        body: JSON.stringify(updatedTodos),
+      });
+
+      setTodos(updatedTodos);
+    } catch (error) {
+      console.error('Erro ao deletar TODO:', error);
+    }
+  };
+
+  // ✅ CARREGAR TODOS AO INICIAR
+  useEffect(() => {
+    fetchTodos();
+  }, []);
+
+  // 🔁 RESTANTE DO SEU CÓDIGO PERMANECE IGUAL!
+  const realToday = new Date('10/24/824');
+  const year = customToday?.getFullYear() ?? realToday.getFullYear();
+  const month = customToday?.getMonth() ?? realToday.getMonth();
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
+
+  const colors = ["#3b82f6", "#ef4444", "#22c55e", "#eab308", "#a855f7"];
+  
+  function getRandomColor() {
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  function fixDate(s: string) {
+    return new Date(+s.split('-')[0], +s.split('-')[1] - 1, +s.split('-')[2]);
+  }
+
+  function getTodosForDay(day: number) {
+    const date = new Date(year, month, day);
+    return todos.filter((t) => date >= t.start && date <= t.end);
+  }
+
+  function isCustomToday(day: number) {
+    if (!customToday) return false;
+    return (
+      customToday.getDate() === day &&
+      customToday.getMonth() === month &&
+      customToday.getFullYear() === year
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-xl">Carregando TODOs...</div>
+      </div>
+    );
+  }
+
+  return (
+    <main className="flex min-h-screen gap-6 p-6 bg-gray-100">
+      {/* Calendário */}
+      <div className="flex-1">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold text-gray-700">
+            {new Date(year, month).toLocaleString("default", {
+              month: "long",
+            })}{" "}
+            {year}
+          </h1>
+
+          {/* Definir "Hoje" customizado */}
+          <form className="text-gray-400">
+            <input
+              type="date"
+              defaultValue={"0824-10-24"}
+              onChange={(e) => changeDate(e.target.value)}
+              className="border p-2 rounded text-sm"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          </form>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        <div className="grid grid-cols-7 gap-2">
+          {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
+            <div key={d} className="font-semibold text-gray-700 text-center">
+              {d}
+            </div>
+          ))}
+
+          {/* Espaços até o primeiro dia */}
+          {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+            <div key={`empty-${i}`} />
+          ))}
+
+          {/* Dias */}
+          {Array.from({ length: daysInMonth }).map((_, i) => {
+            const day = i + 1;
+            const dayTodos = getTodosForDay(day);
+            const isToday = isCustomToday(day);
+
+            return (
+              <div
+                key={day}
+                className={`relative border rounded-lg p-2 h-20 text-center bg-white text-gray-400 flex flex-col justify-between ${
+                  isToday ? "ring-2 ring-blue-600 font-bold" : ""
+                }`}
+              >
+                <span>{day}</span>
+
+                {/* bolinhas */}
+                <div className="flex justify-center gap-1 flex-wrap">
+                  {dayTodos.map((t) => (
+                    <span
+                      key={t.id}
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: t.color }}
+                      title={t.title}
+                    ></span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Área de tarefas */}
+      <div className="w-80 bg-white p-4 rounded-xl shadow">
+        <h2 className="text-lg font-bold mb-2 text-gray-700">Quests</h2>
+
+        <form onSubmit={handleAddTodo} className="text-gray-400 flex flex-col gap-2 mb-4">
+          <input
+            type="text"
+            placeholder="Título"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="border p-2 rounded"
+            required
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+          <textarea
+            placeholder="Descrição (opcional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="border p-2 rounded"
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+          <input
+            type="date"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+            className="border p-2 rounded"
+            required
           />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          <input
+            type="date"
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+            className="border p-2 rounded"
+            required
+          />
+          <button
+            type="submit"
+            className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+          >
+            Adicionar
+          </button>
+        </form>
+
+        <ul className="space-y-2">
+          {todos.map((t) => {
+         if(t.end.getMonth() === month || t.start.getMonth() === month){
+            
+              return (
+                <li
+                  key={t.id}
+                  className="border rounded p-2 bg-gray-50 text-sm flex flex-col"
+                  style={{ borderLeft: `4px solid ${t.color}` }}
+                >
+                  <div className="flex justify-between">
+                    <span className="font-semibold text-gray-700">{t.title}</span>
+                    <button
+                      onClick={() => deleteTask(t.id)}
+                      className="ml-2 text-black font-bold hover:text-red-600"
+                    >
+                      x
+                    </button>
+                  </div>
+                  {t.description && <span className="text-gray-400">{t.description}</span>}
+                  <span className="text-xs text-gray-600">
+                    {t.start.toLocaleDateString()} → {t.end.toLocaleDateString()}
+                  </span>
+                </li>
+              );
+         }
+          })}
+        </ul>
+      </div>
+    </main>
   );
 }
