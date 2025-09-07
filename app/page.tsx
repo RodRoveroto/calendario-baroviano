@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 
-const BIN_ID = '68b8785143b1c97be935ba70';
-const API_KEY = '$2a$10$RlqGKgZbf07v6KyuD9/qm.K/eYGgFu.FCqzpc1ahnjyKjhwbq05F6';
+const BIN_ID = "68b8785143b1c97be935ba70";
+const TODAY_ID = "68be10d4ae596e708fe62632";
+const API_KEY = "$2a$10$RlqGKgZbf07v6KyuD9/qm.K/eYGgFu.FCqzpc1ahnjyKjhwbq05F6";
 
 type Todo = {
   id: number;
@@ -16,40 +17,56 @@ type Todo = {
 
 export default function Home() {
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [today, settoday] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [start, setStart] = useState("0824-10-24");
-  const [end, setEnd] = useState("0824-10-24");
+  const [start, setStart] = useState(today);
+  const [end, setEnd] = useState(today);
   const [customToday, setCustomToday] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
 
   // ✅ BUSCAR TODOS DO JSONBIN
   const fetchTodos = async () => {
     try {
-      const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-        headers: {
-          'X-Master-Key': API_KEY,
+      const response = await fetch(
+        `https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,
+        {
+          headers: {
+            "X-Master-Key": API_KEY,
+          },
         }
-      });
+      );
       const data = await response.json();
-   const todosWithDates = (data.record || []).map((todo: any) => ({
-      ...todo,
-      start: new Date(todo.start),
-      end: new Date(todo.end)
-    }));
-    
-    setTodos(todosWithDates);
-  } catch (error) {
-    console.error('Erro ao buscar TODOs:', error);
-  } finally {
-    setLoading(false);
-  }
+      const responseToday = await fetch(
+        `https://api.jsonbin.io/v3/b/${TODAY_ID}/latest`,
+        {
+          headers: {
+            "X-Master-Key": API_KEY,
+          },
+        }
+      );
+      const todayData = await responseToday.json();
+      settoday(todayData.record.today);
+      setStart(todayData.record.today);
+      setEnd(todayData.record.today);
+      const todosWithDates = (data.record || []).map((todo: any) => ({
+        ...todo,
+        start: new Date(todo.start),
+        end: new Date(todo.end),
+      }));
+
+      setTodos(todosWithDates);
+    } catch (error) {
+      console.error("Erro ao buscar TODOs:", error);
+    } finally {
+      setLoading(false);
+    }
   };
-  const changeDate = (target:any) => {
-setCustomToday(fixDate(target))
-setStart(target)
-setEnd(target)
-  }
+  const changeDate = (target: any) => {
+    setCustomToday(fixDate(target));
+    setStart(target);
+    setEnd(target);
+  };
   // ✅ ADICIONAR TODO NO JSONBIN
   const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,12 +85,12 @@ setEnd(target)
 
     try {
       const updatedTodos = [...todos, newTodo];
-      
+
       await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': API_KEY,
+          "Content-Type": "application/json",
+          "X-Master-Key": API_KEY,
         },
         body: JSON.stringify(updatedTodos),
       });
@@ -81,30 +98,30 @@ setEnd(target)
       setTodos(updatedTodos);
       setTitle("");
       setDescription("");
-      setStart("0824-10-24");
-      setEnd("0824-10-24");
+      setStart(today);
+      setEnd(today);
     } catch (error) {
-      console.error('Erro ao adicionar TODO:', error);
+      console.error("Erro ao adicionar TODO:", error);
     }
   };
 
   // ✅ DELETAR TODO DO JSONBIN
   const deleteTask = async (id: number) => {
     try {
-      const updatedTodos = todos.filter(todo => todo.id !== id);
-      
+      const updatedTodos = todos.filter((todo) => todo.id !== id);
+
       await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': API_KEY,
+          "Content-Type": "application/json",
+          "X-Master-Key": API_KEY,
         },
         body: JSON.stringify(updatedTodos),
       });
 
       setTodos(updatedTodos);
     } catch (error) {
-      console.error('Erro ao deletar TODO:', error);
+      console.error("Erro ao deletar TODO:", error);
     }
   };
 
@@ -113,8 +130,7 @@ setEnd(target)
     fetchTodos();
   }, []);
 
-  // 🔁 RESTANTE DO SEU CÓDIGO PERMANECE IGUAL!
-  const realToday = new Date('10/24/824');
+  const realToday = new Date(today);
   const year = customToday?.getFullYear() ?? realToday.getFullYear();
   const month = customToday?.getMonth() ?? realToday.getMonth();
 
@@ -122,13 +138,13 @@ setEnd(target)
   const firstDayOfWeek = new Date(year, month, 1).getDay();
 
   const colors = ["#3b82f6", "#ef4444", "#22c55e", "#eab308", "#a855f7"];
-  
+
   function getRandomColor() {
     return colors[Math.floor(Math.random() * colors.length)];
   }
 
   function fixDate(s: string) {
-    return new Date(+s.split('-')[0], +s.split('-')[1] - 1, +s.split('-')[2]);
+    return new Date(+s.split("-")[0], +s.split("-")[1] - 1, +s.split("-")[2]);
   }
 
   function getTodosForDay(day: number) {
@@ -137,7 +153,9 @@ setEnd(target)
   }
 
   function isCustomToday(day: number) {
-    if (!customToday) return false;
+    if (!customToday) {
+      return day === +today.split("-")[2];
+    }
     return (
       customToday.getDate() === day &&
       customToday.getMonth() === month &&
@@ -148,7 +166,7 @@ setEnd(target)
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-xl">Carregando TODOs...</div>
+        <div className="text-xl">Carregando Quests...</div>
       </div>
     );
   }
@@ -169,7 +187,7 @@ setEnd(target)
           <form className="text-gray-400">
             <input
               type="date"
-              defaultValue={"0824-10-24"}
+              defaultValue={today}
               onChange={(e) => changeDate(e.target.value)}
               className="border p-2 rounded text-sm"
             />
@@ -198,7 +216,7 @@ setEnd(target)
               <div
                 key={day}
                 className={`relative border rounded-lg p-2 h-20 text-center bg-white text-gray-400 flex flex-col justify-between ${
-                  isToday ? "ring-2 ring-blue-600 font-bold" : ""
+                  isToday ?? "ring-2 ring-blue-600 font-bold"
                 }`}
               >
                 <span>{day}</span>
@@ -224,7 +242,10 @@ setEnd(target)
       <div className="w-80 bg-white p-4 rounded-xl shadow">
         <h2 className="text-lg font-bold mb-2 text-gray-700">Quests</h2>
 
-        <form onSubmit={handleAddTodo} className="text-gray-400 flex flex-col gap-2 mb-4">
+        <form
+          onSubmit={handleAddTodo}
+          className="text-gray-400 flex flex-col gap-2 mb-4"
+        >
           <input
             type="text"
             placeholder="Título"
@@ -263,8 +284,7 @@ setEnd(target)
 
         <ul className="space-y-2">
           {todos.map((t) => {
-         if(t.end.getMonth() === month || t.start.getMonth() === month){
-            
+            if (t.end.getMonth() === month || t.start.getMonth() === month) {
               return (
                 <li
                   key={t.id}
@@ -272,7 +292,9 @@ setEnd(target)
                   style={{ borderLeft: `4px solid ${t.color}` }}
                 >
                   <div className="flex justify-between">
-                    <span className="font-semibold text-gray-700">{t.title}</span>
+                    <span className="font-semibold text-gray-700">
+                      {t.title}
+                    </span>
                     <button
                       onClick={() => deleteTask(t.id)}
                       className="ml-2 text-black font-bold hover:text-red-600"
@@ -280,13 +302,16 @@ setEnd(target)
                       x
                     </button>
                   </div>
-                  {t.description && <span className="text-gray-400">{t.description}</span>}
+                  {t.description && (
+                    <span className="text-gray-400">{t.description}</span>
+                  )}
                   <span className="text-xs text-gray-600">
-                    {t.start.toLocaleDateString()} → {t.end.toLocaleDateString()}
+                    {t.start.toLocaleDateString()} →{" "}
+                    {t.end.toLocaleDateString()}
                   </span>
                 </li>
               );
-         }
+            }
           })}
         </ul>
       </div>
