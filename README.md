@@ -14,6 +14,12 @@ pnpm dev
 bun dev
 ```
 
+Pra buildar no heroku 
+
+```bash
+git push heroku main
+```
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
