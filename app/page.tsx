@@ -216,7 +216,7 @@ export default function Home() {
               <div
                 key={day}
                 className={`relative border rounded-lg p-2 h-20 text-center bg-white text-gray-400 flex flex-col justify-between ${
-                  isToday ?? "ring-2 ring-blue-600 font-bold"
+                  isToday ? "ring-2 ring-blue-600 font-bold" : ""
                 }`}
               >
                 <span>{day}</span>
